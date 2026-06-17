@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dalecote House — Volunteer Tasks</title>
+<!-- QR code library -->
+
+<style>
+  :root {
+    --green-dark:  #1e5c30;
+    --green-mid:   #2d7a45;
+    --green-light: #e8f5ec;
+    --amber:       #b86000;
+    --red:         #c0180c;
+    --text:        #1a1a1a;
+    --muted:       #666;
+    --white:       #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, sans-serif;
+    background: var(--green-light);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: var(--green-dark);
+    color: white;
+    padding: 1.1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 2rem; font-weight: 700; }
+  #updated  { font-size: 0.85rem; opacity: 0.75; text-align: right; line-height: 1.5; }
+
+  main {
+    flex: 1;
+    padding: 1.5rem 2rem;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  #status-bar { font-size: 0.82rem; color: var(--muted); margin-bottom: 1.2rem; min-height: 1.2rem; }
+
+  #task-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .task-card {
+    background: white;
+    border-radius: 10px;
+    border-left: 6px solid var(--green-mid);
+    padding: 1rem 1.25rem;
+    display: grid;
+    grid-template-columns: 56px 1fr auto 90px;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    transition: opacity 0.3s;
+  }
+  .task-card.overdue { border-left-color: var(--red); }
+  .task-card.today   { border-left-color: var(--amber); }
+  .task-card.done    { border-left-color: #aaa; opacity: 0.45; }
+  .task-card.unset   { border-left-color: #aaa; }
+
+  .task-icon  { font-size: 2.2rem; text-align: center; }
+  .task-label { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .task-notes { font-size: 0.88rem; color: var(--muted); margin-top: 0.2rem; }
+  .task-done-by { font-size: 0.82rem; color: var(--green-mid); font-weight: 600; margin-top: 0.3rem; }
+
+  .task-when {
+    text-align: right;
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 140px;
+  }
+  .task-when.overdue { color: var(--red); }
+  .task-when.today   { color: var(--amber); }
+  .task-when.done    { color: #aaa; font-weight: 400; font-style: italic; }
+  .task-when.unset   { color: var(--muted); font-weight: 400; font-style: italic; }
+
+  /* QR code column */
+  .task-qr { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+  .task-qr canvas, .task-qr img { width: 80px !important; height: 80px !important; }
+  .task-qr-label { font-size: 0.6rem; color: var(--muted); text-align: center; }
+
+  /* All clear */
+  #all-clear {
+    display: none;
+    background: white;
+    border-radius: 10px;
+    padding: 2.5rem;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  #all-clear .tick { font-size: 3rem; margin-bottom: 0.75rem; }
+  #all-clear p { font-size: 1.4rem; color: var(--green-dark); font-weight: 600; }
+
+  /* General sign-off QR */
+  #general-qr {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: white;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  #general-qr-code canvas, #general-qr-code img { width: 70px !important; height: 70px !important; }
+  #general-qr p { font-size: 0.82rem; }
+  #general-qr strong { color: var(--green-dark); display: block; margin-bottom: 0.2rem; }
+
+  footer {
+    text-align: center;
+    padding: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  @media (min-height: 800px) {
+    body { font-size: 18px; }
+    header h1 { font-size: 2.4rem; }
+    .task-label { font-size: 1.5rem; }
+    .task-when  { font-size: 1.2rem; }
+    .task-icon  { font-size: 2.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏛 Dalecote House — Volunteer Tasks</h1>
+  <div id="updated">Loading…</div>
+</header>
+
+<main>
+  <div id="status-bar"></div>
+
+  <!-- General sign-off QR -->
+  <div id="general-qr">
+    <div id="general-qr-code"></div>
+    <div>
+      <strong>📱 Scan to sign off a task</strong>
+      <p>Or scan the QR code next to each item on this screen</p>
+    </div>
+  </div>
+
+  <div id="task-list"></div>
+  <div id="all-clear">
+    <div class="tick">✅</div>
+    <p>All done — thank you volunteers!</p>
+  </div>
+</main>
+
+<footer>Refreshes every 5 minutes · Dalecote House</footer>
+
+<script>
+const GAS_URL   = 'https://script.google.com/macros/s/AKfycbx7Yw6rlSG2tSTkNxR4VQXPQEn70y4hd8BbNz4PoiSng1bbSZPhnNn4VaDtwqZgaIK9Ug/exec';
+const BASE_URL  = 'https://dalecotehouse.github.io/Volunteer/';
+const DAYS_AHEAD = 7;
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function today() { return new Date().toISOString().slice(0,10); }
+function daysDiff(ds) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((new Date(ds+'T00:00:00') - now) / 86400000);
+}
+function fmtDate(s) {
+  return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+}
+function nowStr() {
+  return new Date().toLocaleString('en-GB',{weekday:'long',day:'numeric',month:'long',
+    year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+function makeQR(el, url, size) {
+  // Use Google Charts QR API — works on any network-connected display
+  // Falls back to a link if image fails
+  const img = document.createElement('img');
+  img.width  = size;
+  img.height = size;
+  img.style.borderRadius = '4px';
+  img.alt = 'QR code';
+  const encoded = encodeURIComponent(url);
+  img.src = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encoded}&chco=1e5c30&chf=bg,s,ffffff&chld=M|2`;
+  img.onerror = () => {
+    // Fallback: show a small link
+    el.innerHTML = `<a href="${url}" style="font-size:0.6rem;color:var(--green-dark);word-break:break-all;">Sign off</a>`;
+  };
+  el.appendChild(img);
+}
+
+function gasGet(params) {
+  return new Promise((resolve, reject) => {
+    const cb  = 'wpwCb' + Date.now() + Math.random().toString(36).slice(2);
+    const tag = document.createElement('script');
+    const tid = setTimeout(() => { tag.remove(); reject(new Error('Timeout')); }, 15000);
+    window[cb] = d => { clearTimeout(tid); tag.remove(); delete window[cb]; resolve(d); };
+    const qs = Object.entries({...params, callback: cb})
+      .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    tag.src = GAS_URL + '?' + qs;
+    tag.onerror = () => { clearTimeout(tid); tag.remove(); reject(new Error('Network error')); };
+    document.head.appendChild(tag);
+  });
+}
+
+let completionMap = {}; // taskId -> completion record
+
+async function fetchAll() {
+  document.getElementById('status-bar').textContent = 'Refreshing…';
+  try {
+    const [tr, cr] = await Promise.all([
+      gasGet({ action: 'volunteerTasksFetch' }),
+      gasGet({ action: 'volunteerCompletionsFetch', date: today() })
+    ]);
+
+    if (cr.ok) {
+      completionMap = {};
+      (cr.completions||[]).forEach(c => { completionMap[c.taskId] = c; });
+    }
+
+    if (tr.ok) render(tr.tasks || [], tr.updatedAt);
+    else document.getElementById('status-bar').textContent = 'Error: ' + (tr.error||'unknown');
+  } catch(e) {
+    document.getElementById('status-bar').textContent = 'Could not reach server — will retry.';
+  }
+}
+
+function render(tasks, dataUpdatedAt) {
+  const list     = document.getElementById('task-list');
+  const allClear = document.getElementById('all-clear');
+  const updated  = document.getElementById('updated');
+  const status   = document.getElementById('status-bar');
+
+  // Generate general QR once
+  const genQrEl = document.getElementById('general-qr-code');
+  if (!genQrEl.hasChildNodes()) {
+    makeQR(genQrEl, BASE_URL + 'sign-off.html', 70);
+  }
+
+  const filtered = tasks.filter(t => {
+    if (!t.nextDue) return true;
+    return daysDiff(t.nextDue) <= DAYS_AHEAD;
+  }).sort((a,b) => {
+    if (!a.nextDue && !b.nextDue) return 0;
+    if (!a.nextDue) return 1;
+    if (!b.nextDue) return -1;
+    return a.nextDue.localeCompare(b.nextDue);
+  });
+
+  updated.innerHTML = `Page updated: ${nowStr()}<br>
+    Data synced: ${dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleString('en-GB',
+      {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}`;
+
+  list.innerHTML = '';
+
+  const activeTasks = filtered.filter(t => !completionMap[t.id]);
+
+  if (filtered.length === 0) {
+    allClear.style.display = 'block';
+    status.textContent = 'All volunteer tasks are up to date.';
+    return;
+  }
+
+  allClear.style.display = 'none';
+  const doneCount = filtered.length - activeTasks.length;
+  status.textContent = `${filtered.length} task${filtered.length!==1?'s':''} · ${activeTasks.length} outstanding · ${doneCount} signed off today`;
+
+  filtered.forEach(t => {
+    const isDone = !!completionMap[t.id];
+    let whenText, whenCls;
+
+    if (isDone) {
+      whenText = '✓ Done'; whenCls = 'done';
+    } else if (!t.nextDue) {
+      whenText = 'No date set'; whenCls = 'unset';
+    } else {
+      const d = daysDiff(t.nextDue);
+      if (d < 0)       { whenText = `Overdue ${Math.abs(d)}d`; whenCls = 'overdue'; }
+      else if (d === 0){ whenText = 'Due today';                whenCls = 'today'; }
+      else             { whenText = 'Due ' + fmtDate(t.nextDue); whenCls = ''; }
+    }
+
+    const card = document.createElement('div');
+    card.className = `task-card ${isDone ? 'done' : whenCls}`;
+
+    const doneBy = isDone && completionMap[t.id]
+      ? `<div class="task-done-by">✓ Signed off by ${esc(completionMap[t.id].initials)}</div>` : '';
+
+    card.innerHTML = `
+      <div class="task-icon">${t.icon||'📋'}</div>
+      <div class="task-body">
+        <div class="task-label">${esc(t.label)}</div>
+        ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ''}
+        ${doneBy}
+      </div>
+      <div class="task-when ${whenCls}">${whenText}</div>
+      <div class="task-qr" id="qr-${t.id}">
+        <span class="task-qr-label">Scan to<br>sign off</span>
+      </div>
+    `;
+    list.appendChild(card);
+
+    // Generate per-task QR
+    if (!isDone) {
+      const qrEl = document.getElementById('qr-' + t.id);
+      makeQR(qrEl, `${BASE_URL}sign-off.html?task=${t.id}`, 80);
+    }
+  });
+}
+
+fetchAll();
+setInterval(fetchAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>
