@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Dalecote — Sign Off Task</title>
+<style>
+  :root {
+    --green-dark:  #1e5c30;
+    --green-mid:   #2d7a45;
+    --green-light: #e8f5ec;
+    --amber:       #b86000;
+    --red:         #c0180c;
+    --text:        #1a1a1a;
+    --muted:       #666;
+    --white:       #ffffff;
+    --border:      #d0e8d8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, sans-serif;
+    background: var(--green-light);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: var(--green-dark);
+    color: white;
+    padding: 1rem 1.5rem;
+    text-align: center;
+  }
+  header h1 { font-size: 1.3rem; font-weight: 700; }
+  header p  { font-size: 0.8rem; opacity: 0.75; margin-top: 0.2rem; }
+
+  main {
+    flex: 1;
+    padding: 1.25rem;
+    max-width: 500px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* ── Task card ── */
+  .task-card {
+    background: white;
+    border-radius: 12px;
+    border-left: 6px solid var(--green-mid);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .task-card.overdue { border-left-color: var(--red); }
+  .task-card.today   { border-left-color: var(--amber); }
+  .task-card.done    { border-left-color: #aaa; opacity: 0.6; }
+
+  .task-icon  { font-size: 2rem; margin-bottom: 0.4rem; }
+  .task-label { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .task-when  { font-size: 0.88rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .task-when.overdue { color: var(--red); font-weight: 600; }
+  .task-when.today   { color: var(--amber); font-weight: 600; }
+  .task-notes { font-size: 0.82rem; color: var(--muted); margin-bottom: 0.75rem;
+                background: var(--green-light); border-radius: 6px; padding: 0.5rem 0.75rem; }
+  .done-badge {
+    display: inline-block;
+    background: #e8f5ec;
+    color: var(--green-mid);
+    border: 1px solid var(--green-mid);
+    border-radius: 20px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  /* ── Sign-off form ── */
+  .signoff-form { margin-top: 0.75rem; }
+  .signoff-form label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--green-dark);
+    margin-bottom: 0.4rem;
+  }
+  .initials-row { display: flex; gap: 0.5rem; }
+  .initials-input {
+    flex: 1;
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    padding: 0.6rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    color: var(--text);
+  }
+  .initials-input:focus { outline: none; border-color: var(--green-mid); }
+
+  .btn-signoff {
+    background: var(--green-dark);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .btn-signoff:hover   { background: var(--green-mid); }
+  .btn-signoff:active  { background: #1a4a28; }
+  .btn-signoff:disabled { background: #aaa; cursor: not-allowed; }
+
+  /* ── All tasks list ── */
+  #all-tasks { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  /* ── Status messages ── */
+  .msg {
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    margin-top: 0.75rem;
+    text-align: center;
+  }
+  .msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+  .msg.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+  .msg.info    { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+  /* ── Loading ── */
+  #loading { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
+
+  footer {
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏛 Dalecote House</h1>
+  <p>Volunteer Task Sign-Off</p>
+</header>
+
+<main>
+  <div id="loading">Loading tasks…</div>
+  <div id="content" style="display:none;">
+    <!-- filled by JS -->
+  </div>
+</main>
+
+<footer>Dalecote House · Please speak to the manager if you have questions</footer>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx7Yw6rlSG2tSTkNxR4VQXPQEn70y4hd8BbNz4PoiSng1bbSZPhnNn4VaDtwqZgaIK9Ug/exec';
+
+// ── Helpers ─────────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function today() { return new Date().toISOString().slice(0,10); }
+
+function daysDiff(ds) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((new Date(ds+'T00:00:00') - now) / 86400000);
+}
+
+function whenText(task) {
+  if (!task.nextDue) return { text: 'No date set', cls: '' };
+  const d = daysDiff(task.nextDue);
+  if (d < 0)  return { text: `Overdue by ${Math.abs(d)} day${Math.abs(d)!==1?'s':''}`, cls: 'overdue' };
+  if (d === 0) return { text: 'Due today', cls: 'today' };
+  const dt = new Date(task.nextDue+'T00:00:00');
+  return { text: 'Due ' + dt.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'}), cls: '' };
+}
+
+function cardUrgency(task) {
+  if (!task.nextDue) return '';
+  const d = daysDiff(task.nextDue);
+  if (d < 0)  return 'overdue';
+  if (d === 0) return 'today';
+  return '';
+}
+
+// ── JSONP fetch ─────────────────────────────────────────────
+function gasGet(params) {
+  return new Promise((resolve, reject) => {
+    const cb  = 'wpwCb' + Date.now();
+    const tag = document.createElement('script');
+    const tid = setTimeout(() => { tag.remove(); reject(new Error('Timeout')); }, 15000);
+    window[cb] = data => { clearTimeout(tid); tag.remove(); delete window[cb]; resolve(data); };
+    const qs = Object.entries({...params, callback: cb})
+      .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    tag.src = GAS_URL + '?' + qs;
+    tag.onerror = () => { clearTimeout(tid); tag.remove(); reject(new Error('Network error')); };
+    document.head.appendChild(tag);
+  });
+}
+
+// ── State ───────────────────────────────────────────────────
+let allTasks = [];
+let completedToday = new Set(); // taskIds completed today
+let targetTaskId = null;
+
+// ── Parse URL params ────────────────────────────────────────
+const urlParams = new URLSearchParams(window.location.search);
+targetTaskId = urlParams.get('task') || null;
+
+// ── Load data ───────────────────────────────────────────────
+async function loadAll() {
+  try {
+    const [tasksRes, completionsRes] = await Promise.all([
+      gasGet({ action: 'volunteerTasksFetch' }),
+      gasGet({ action: 'volunteerCompletionsFetch', date: today() })
+    ]);
+
+    if (tasksRes.ok) allTasks = tasksRes.tasks || [];
+    if (completionsRes.ok) {
+      completedToday = new Set((completionsRes.completions||[]).map(c => c.taskId));
+    }
+
+    render();
+  } catch(e) {
+    document.getElementById('loading').textContent = 'Could not load tasks — ' + e.message;
+  }
+}
+
+// ── Render ──────────────────────────────────────────────────
+function render() {
+  document.getElementById('loading').style.display = 'none';
+  const content = document.getElementById('content');
+  content.style.display = 'block';
+  content.innerHTML = '';
+
+  const tasks = targetTaskId
+    ? allTasks.filter(t => t.id === targetTaskId)
+    : allTasks;
+
+  if (tasks.length === 0) {
+    content.innerHTML = '<div class="msg info">No tasks found.</div>';
+    return;
+  }
+
+  if (targetTaskId) {
+    // Single task mode
+    content.appendChild(buildCard(tasks[0]));
+  } else {
+    // All tasks mode
+    const div = document.createElement('div');
+    div.id = 'all-tasks';
+    tasks.forEach(t => div.appendChild(buildCard(t)));
+    content.appendChild(div);
+  }
+}
+
+function buildCard(task) {
+  const isDone  = completedToday.has(task.id);
+  const when    = whenText(task);
+  const urgency = cardUrgency(task);
+
+  const card = document.createElement('div');
+  card.className = `task-card ${isDone ? 'done' : urgency}`;
+  card.id = 'card-' + task.id;
+
+  let html = `
+    <div class="task-icon">${task.icon || '📋'}</div>
+    <div class="task-label">${esc(task.label)}</div>
+    <div class="task-when ${when.cls}">${when.text}</div>
+    ${task.notes ? `<div class="task-notes">${esc(task.notes)}</div>` : ''}
+  `;
+
+  if (isDone) {
+    const rec = window._completionRecords && window._completionRecords[task.id];
+    html += `<div class="done-badge">✓ Signed off today${rec ? ' by ' + rec.initials : ''}</div>`;
+  } else {
+    html += `
+      <div class="signoff-form">
+        <label for="init-${task.id}">Your initials to sign off:</label>
+        <div class="initials-row">
+          <input class="initials-input" id="init-${task.id}" 
+                 type="text" maxlength="4" placeholder="e.g. WW"
+                 autocomplete="off" autocorrect="off" spellcheck="false">
+          <button class="btn-signoff" onclick="signOff('${task.id}','${esc(task.label)}')">
+            ✓ Done
+          </button>
+        </div>
+        <div id="msg-${task.id}"></div>
+      </div>
+    `;
+  }
+
+  card.innerHTML = html;
+  return card;
+}
+
+// ── Sign off ────────────────────────────────────────────────
+async function signOff(taskId, label) {
+  const input    = document.getElementById('init-' + taskId);
+  const initials = (input.value || '').trim().toUpperCase().replace(/[^A-Z]/g,'');
+  const msgEl    = document.getElementById('msg-' + taskId);
+
+  if (!initials || initials.length < 1) {
+    msgEl.innerHTML = '<div class="msg error">Please enter your initials first.</div>';
+    input.focus();
+    return;
+  }
+
+  // Disable button during submit
+  const btn = input.parentElement.querySelector('button');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  msgEl.innerHTML = '';
+
+  try {
+    const res = await gasGet({
+      action:   'volunteerSignOff',
+      taskId,
+      label,
+      initials
+    });
+
+    if (res.ok) {
+      completedToday.add(taskId);
+      if (!window._completionRecords) window._completionRecords = {};
+      window._completionRecords[taskId] = { initials };
+      // Re-render just this card
+      const card = document.getElementById('card-' + taskId);
+      const newCard = buildCard(allTasks.find(t => t.id === taskId));
+      card.replaceWith(newCard);
+    } else if (res.alreadyDone) {
+      completedToday.add(taskId);
+      const card = document.getElementById('card-' + taskId);
+      const newCard = buildCard(allTasks.find(t => t.id === taskId));
+      card.replaceWith(newCard);
+    } else {
+      btn.disabled = false;
+      btn.textContent = '✓ Done';
+      msgEl.innerHTML = `<div class="msg error">${esc(res.error || 'Error — please try again')}</div>`;
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✓ Done';
+    msgEl.innerHTML = `<div class="msg error">Could not connect — please try again.</div>`;
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>
