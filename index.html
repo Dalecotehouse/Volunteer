@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dalecote House — Volunteer Tasks</title>
+<style>
+  :root {
+    --green-dark:  #1e5c30;
+    --green-mid:   #2d7a45;
+    --green-light: #e8f5ec;
+    --amber:       #b86000;
+    --red:         #c0180c;
+    --text:        #1a1a1a;
+    --muted:       #666;
+    --white:       #ffffff;
+    --border:      #c8e4d0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: Arial, sans-serif;
+    background: var(--green-light);
+    color: var(--text);
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--green-dark);
+    color: white;
+    padding: 0.9rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .hdr-left { display: flex; align-items: center; gap: 0.75rem; }
+  header h1 { font-size: 1.8rem; font-weight: 700; }
+  #updated  { font-size: 0.78rem; opacity: 0.8; text-align: right; line-height: 1.6; }
+
+  /* ── Status bar ── */
+  #status-bar {
+    background: rgba(255,255,255,0.55);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--green-dark);
+    font-weight: 600;
+    padding: 0.3rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Two-column main layout ── */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    min-height: 0;
+  }
+
+  /* ── Left: task list ── */
+  #task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    overflow-y: auto;
+  }
+
+  .task-card {
+    background: white;
+    border-radius: 8px;
+    border-left: 5px solid var(--green-mid);
+    padding: 0.7rem 1rem;
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: 0.85rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    transition: opacity 0.3s;
+  }
+  .task-card.overdue { border-left-color: var(--red); }
+  .task-card.today   { border-left-color: var(--amber); }
+  .task-card.done    { border-left-color: #aaa; opacity: 0.42; }
+  .task-card.unset   { border-left-color: #aaa; }
+
+  .task-icon  { font-size: 1.8rem; text-align: center; }
+  .task-label { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.15rem; }
+  .task-notes { font-size: 0.78rem; color: var(--muted); }
+  .task-done-by { font-size: 0.75rem; color: var(--green-mid); font-weight: 600; margin-top: 0.2rem; }
+
+  .task-when {
+    text-align: right;
+    font-size: 0.88rem;
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 110px;
+  }
+  .task-when.overdue { color: var(--red); }
+  .task-when.today   { color: var(--amber); }
+  .task-when.done    { color: #aaa; font-weight: 400; font-style: italic; }
+  .task-when.unset   { color: var(--muted); font-weight: 400; font-style: italic; }
+
+  /* ── All clear ── */
+  #all-clear {
+    display: none;
+    background: white;
+    border-radius: 10px;
+    padding: 2.5rem;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  #all-clear .tick { font-size: 3rem; margin-bottom: 0.75rem; }
+  #all-clear p { font-size: 1.4rem; color: var(--green-dark); font-weight: 600; }
+
+  /* ── Right column ── */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  /* QR panel */
+  .qr-panel {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    flex-shrink: 0;
+  }
+  .qr-panel .qr-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--green-dark);
+    margin-bottom: 0.25rem;
+  }
+  .qr-panel .qr-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+  }
+  .qr-panel img {
+    display: block;
+    margin: 0 auto;
+    border: 2px solid var(--green-dark);
+    border-radius: 6px;
+    width: 180px;
+    height: 180px;
+  }
+  .qr-panel .qr-url {
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+    word-break: break-all;
+  }
+
+  /* Stats panel */
+  .stats-panel {
+    background: var(--green-dark);
+    color: white;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .stat-box .stat-num { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+  .stat-box .stat-lbl { font-size: 0.65rem; opacity: 0.8; }
+
+  /* Instruction card */
+  .instruction-card {
+    background: white;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    line-height: 1.5;
+  }
+  .instruction-card strong { color: var(--green-dark); display: block; margin-bottom: 0.3rem; font-size: 0.82rem; }
+
+  footer {
+    text-align: center;
+    padding: 0.4rem;
+    font-size: 0.68rem;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  /* ── Scale up on large screens ── */
+  @media (min-height: 800px) and (min-width: 1200px) {
+    header h1 { font-size: 2.2rem; }
+    .task-label { font-size: 1.25rem; }
+    .task-when  { font-size: 1rem; min-width: 130px; }
+    .task-icon  { font-size: 2.2rem; }
+    .task-card  { padding: 0.9rem 1.1rem; }
+    main { grid-template-columns: 1fr 270px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-left">
+    <h1>🏛 Dalecote House — Volunteer Tasks</h1>
+  </div>
+  <div id="updated">Loading…</div>
+</header>
+
+<div id="status-bar">
+  <span id="status-text">Connecting…</span>
+  <span>Refreshes every 5 minutes</span>
+</div>
+
+<main>
+  <!-- Left: task cards -->
+  <div>
+    <div id="task-list"></div>
+    <div id="all-clear">
+      <div class="tick">✅</div>
+      <p>All done — thank you volunteers!</p>
+    </div>
+  </div>
+
+  <!-- Right: QR + stats -->
+  <div class="right-col">
+
+    <div class="qr-panel">
+      <div class="qr-title">📱 Scan to sign off</div>
+      <div class="qr-sub">Use your phone camera</div>
+      <img id="qr-img"
+           src="https://raw.githubusercontent.com/dalecotehouse/Volunteer/main/QRcode.png"
+           alt="QR code — scan to sign off a task"
+           onerror="this.onerror=null; this.src='https://chart.googleapis.com/chart?cht=qr&chs=360x360&chl=https%3A%2F%2Fdalecotehouse.github.io%2FVolunteer%2Fsign-off.html&chco=1e5c30&chf=bg,s,ffffff&chld=H%7C2';">
+      <div class="qr-url">dalecotehouse.github.io/Volunteer/sign-off.html</div>
+    </div>
+
+    <div class="stats-panel">
+      <div class="stat-box">
+        <div class="stat-num" id="stat-done">—</div>
+        <div class="stat-lbl">Done today</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="stat-outstanding">—</div>
+        <div class="stat-lbl">Outstanding</div>
+      </div>
+    </div>
+
+    <div class="instruction-card">
+      <strong>How to sign off a task</strong>
+      Scan the QR code above with your phone camera, choose the task you completed, enter your initials and tap Done.
+    </div>
+
+  </div>
+</main>
+
+<footer>Dalecote House · Volunteer Task Board</footer>
+
+<script>
+const GAS_URL    = 'https://script.google.com/macros/s/AKfycbx7Yw6rlSG2tSTkNxR4VQXPQEn70y4hd8BbNz4PoiSng1bbSZPhnNn4VaDtwqZgaIK9Ug/exec';
+const DAYS_AHEAD = 7;
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function today() { return new Date().toISOString().slice(0,10); }
+function daysDiff(ds) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((new Date(ds+'T00:00:00') - now) / 86400000);
+}
+function fmtDate(s) {
+  return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+}
+function nowStr() {
+  return new Date().toLocaleString('en-GB',{weekday:'long',day:'numeric',month:'long',
+    year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+function gasGet(params) {
+  return new Promise((resolve, reject) => {
+    const cb  = 'wpwCb' + Date.now() + Math.random().toString(36).slice(2);
+    const tag = document.createElement('script');
+    const tid = setTimeout(() => { tag.remove(); reject(new Error('Timeout')); }, 15000);
+    window[cb] = d => { clearTimeout(tid); tag.remove(); delete window[cb]; resolve(d); };
+    const qs = Object.entries({...params, callback: cb})
+      .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    tag.src = GAS_URL + '?' + qs;
+    tag.onerror = () => { clearTimeout(tid); tag.remove(); reject(new Error('Network error')); };
+    document.head.appendChild(tag);
+  });
+}
+
+let completionMap = {};
+
+async function fetchAll() {
+  document.getElementById('status-text').textContent = 'Refreshing…';
+  try {
+    const [tr, cr] = await Promise.all([
+      gasGet({ action: 'volunteerTasksFetch' }),
+      gasGet({ action: 'volunteerCompletionsFetch', date: today() })
+    ]);
+
+    if (cr.ok) {
+      completionMap = {};
+      (cr.completions||[]).forEach(c => { completionMap[c.taskId] = c; });
+    }
+
+    if (tr.ok) render(tr.tasks || [], tr.updatedAt);
+    else document.getElementById('status-text').textContent = 'Error: ' + (tr.error||'unknown');
+  } catch(e) {
+    document.getElementById('status-text').textContent = 'Could not reach server — will retry in 5 minutes.';
+  }
+}
+
+function render(tasks, dataUpdatedAt) {
+  const list     = document.getElementById('task-list');
+  const allClear = document.getElementById('all-clear');
+  const updated  = document.getElementById('updated');
+
+  const filtered = tasks.filter(t => {
+    if (!t.nextDue) return true;
+    return daysDiff(t.nextDue) <= DAYS_AHEAD;
+  }).sort((a,b) => {
+    if (!a.nextDue && !b.nextDue) return 0;
+    if (!a.nextDue) return 1;
+    if (!b.nextDue) return -1;
+    return a.nextDue.localeCompare(b.nextDue);
+  });
+
+  updated.innerHTML = `Updated: ${nowStr()}<br>Data: ${dataUpdatedAt
+    ? new Date(dataUpdatedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+    : '—'}`;
+
+  list.innerHTML = '';
+
+  const doneCount = filtered.filter(t => completionMap[t.id]).length;
+  const outstanding = filtered.length - doneCount;
+
+  document.getElementById('stat-done').textContent        = doneCount;
+  document.getElementById('stat-outstanding').textContent = outstanding;
+
+  if (filtered.length === 0) {
+    allClear.style.display = 'block';
+    document.getElementById('status-text').textContent = 'All volunteer tasks are up to date.';
+    return;
+  }
+
+  allClear.style.display = 'none';
+  document.getElementById('status-text').textContent =
+    `${filtered.length} task${filtered.length!==1?'s':''} · ${outstanding} outstanding · ${doneCount} signed off today`;
+
+  filtered.forEach(t => {
+    const isDone = !!completionMap[t.id];
+    let whenText, whenCls;
+
+    if (isDone) {
+      whenText = '✓ Done'; whenCls = 'done';
+    } else if (!t.nextDue) {
+      whenText = 'No date set'; whenCls = 'unset';
+    } else {
+      const d = daysDiff(t.nextDue);
+      if (d < 0)        { whenText = `Overdue ${Math.abs(d)}d`; whenCls = 'overdue'; }
+      else if (d === 0) { whenText = 'Due today';               whenCls = 'today'; }
+      else              { whenText = 'Due ' + fmtDate(t.nextDue); whenCls = ''; }
+    }
+
+    const doneBy = isDone && completionMap[t.id]
+      ? `<div class="task-done-by">✓ Signed off by ${esc(completionMap[t.id].initials)}</div>` : '';
+
+    const card = document.createElement('div');
+    card.className = `task-card ${isDone ? 'done' : whenCls}`;
+    card.innerHTML = `
+      <div class="task-icon">${t.icon||'📋'}</div>
+      <div class="task-body">
+        <div class="task-label">${esc(t.label)}</div>
+        ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ''}
+        ${doneBy}
+      </div>
+      <div class="task-when ${whenCls}">${whenText}</div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+fetchAll();
+setInterval(fetchAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>
